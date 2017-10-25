@@ -252,7 +252,7 @@ class CreateFromSourceCommand
         $fileGenerator = new FileGenerator();
         $fileGenerator->setClass($classGenerator);
 
-        @file_put_contents($testFilePath, $fileGenerator->generate());
+        file_put_contents($testFilePath, $fileGenerator->generate());
 
         $console->writeLine(sprintf('Writing file %s finished', $testFilePath));
         $console->writeLine('');
