@@ -19,13 +19,13 @@ foreach ($autoloadFiles as $autoloadFile) {
 
 define('VERSION', 0.1);
 
-$botConfig = new BotConfig(include getcwd() . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'config.php');
+$botConfig = new BotConfig(include __DIR__ . '/../config/config.php');
 
 $dispatcher = new Dispatcher();
 $dispatcher->map('create', new CreateFromSourceCommand($botConfig));
 
 $application = new Application(
-    'Builder', VERSION, include getcwd() . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'routes.php', Console::getInstance(), $dispatcher
+    'Builder', VERSION, include __DIR__ . '/../config/routes.php', Console::getInstance(), $dispatcher
 );
 $exit = $application->run();
 exit($exit);
