@@ -4,7 +4,7 @@ This friendly bot will create a unit test directly from your source file
 
 ## Installation
 
-    composer require tobiasoberrauch/phpunit-bot
+    composer global require tobiasoberrauch/phpunit-bot dev-master
     
 ## Run
 

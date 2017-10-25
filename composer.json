@@ -8,7 +8,7 @@
         }
     ],
     "bin": [
-        "bin/phpunit-bot.bat"
+        "bin/phpunit-bot"
     ],
     "require": {
         "zfcampus/zf-console": "^1.3",
