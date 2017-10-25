@@ -4,7 +4,6 @@ namespace Tob\PhpUnitBot\Command;
 
 use PHPUnit\Framework\TestCase;
 use ReflectionException;
-use SplFileInfo;
 use Tob\PhpUnitBot\Config\BotConfig;
 use Zend\Code\Generator\ClassGenerator;
 use Zend\Code\Generator\DocBlockGenerator;
@@ -53,9 +52,6 @@ class CreateFromSourceCommand
     public function __invoke(Route $route, AdapterInterface $console)
     {
         $sourceFile = $route->getMatchedParam('sourceFile');
-        $testDirectory = $route->getMatchedParam('testDirectory');
-
-        $fileInfo = new SplFileInfo($sourceFile);
 
         $fp = fopen($sourceFile, 'rb');
         $sourceClassName = $sourceNamespace = $buffer = '';
@@ -80,14 +76,6 @@ class CreateFromSourceCommand
                 $sourceNamespace = $matches[1];
                 break;
             }
-        }
-
-        $testBasename = $fileInfo->getBasename('.php') . 'Test';
-        $testFilePath = $testDirectory . '/' . $testBasename . '.php';
-        $testFileDirectory = dirname($testFilePath);
-
-        if (!is_dir($testFileDirectory)) {
-            mkdir($testFileDirectory, 0755, true);
         }
 
         try {
@@ -159,7 +147,7 @@ class CreateFromSourceCommand
                     ],
                     [
                         'name'        => 'license',
-                        'description' => $this->config->getLicence()
+                        'description' => $this->config->getLicence(),
                     ],
                 ],
             ]
