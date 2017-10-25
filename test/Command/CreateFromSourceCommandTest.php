@@ -11,11 +11,11 @@ use Tob\PhpUnitBot\Config\BotConfig;
  *
  * PHP Version 7
  *
- * @category  PHP
- * @package   Tob\PhpUnitBot\CommandTest
- * @author    Simplicity Trade GmbH <development@simplicity.ag>
+ * @category PHP
+ * @package Tob\PhpUnitBot\CommandTest
+ * @author Simplicity Trade GmbH <development@simplicity.ag>
  * @copyright 2014-2017 Simplicity Trade GmbH
- * @license   Proprietary http://www.simplicity.ag
+ * @license Proprietary http://www.simplicity.ag
  */
 class CreateFromSourceCommandTest extends TestCase
 {
@@ -51,4 +51,5 @@ class CreateFromSourceCommandTest extends TestCase
 
 
 }
+
 

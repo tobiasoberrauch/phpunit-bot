@@ -27,5 +27,6 @@ $dispatcher->map('create', new CreateFromSourceCommand($botConfig));
 $application = new Application(
     'Builder', VERSION, include __DIR__ . '/../config/routes.php', Console::getInstance(), $dispatcher
 );
+$application->setBannerDisabledForUserCommands();
 $exit = $application->run();
 exit($exit);

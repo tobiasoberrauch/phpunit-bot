@@ -55,8 +55,6 @@ class CreateFromSourceCommand
         $sourceFile = $route->getMatchedParam('sourceFile');
         $testDirectory = $route->getMatchedParam('testDirectory');
 
-        $console->writeLine('Start reading ' . $sourceFile);
-
         $fileInfo = new SplFileInfo($sourceFile);
 
         $fp = fopen($sourceFile, 'rb');
@@ -84,21 +82,12 @@ class CreateFromSourceCommand
             }
         }
 
-        $console->writeLine(sprintf("Class %s\\%s found", $sourceNamespace, $sourceClassName));
-
         $testBasename = $fileInfo->getBasename('.php') . 'Test';
-
         $testFilePath = $testDirectory . '/' . $testBasename . '.php';
-        $console->writeLine('Start writing test file ' . $testFilePath);
-
         $testFileDirectory = dirname($testFilePath);
 
         if (!is_dir($testFileDirectory)) {
             mkdir($testFileDirectory, 0755, true);
-        }
-
-        if (is_file($testFilePath)) {
-            return;
         }
 
         try {
@@ -252,9 +241,6 @@ class CreateFromSourceCommand
         $fileGenerator = new FileGenerator();
         $fileGenerator->setClass($classGenerator);
 
-        file_put_contents($testFilePath, $fileGenerator->generate());
-
-        $console->writeLine(sprintf('Writing file %s finished', $testFilePath));
-        $console->writeLine('');
+        $console->writeLine(@$fileGenerator->generate());
     }
 }
