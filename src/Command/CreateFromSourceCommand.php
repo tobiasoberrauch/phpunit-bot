@@ -3,8 +3,8 @@
 namespace Tob\PhpUnitBot\Command;
 
 use PHPUnit\Framework\TestCase;
-use ReflectionException;
 use Tob\PhpUnitBot\Config\BotConfig;
+use Tob\PhpUnitBot\Io\SourceFile;
 use Zend\Code\Generator\ClassGenerator;
 use Zend\Code\Generator\DocBlockGenerator;
 use Zend\Code\Generator\FileGenerator;
@@ -16,7 +16,7 @@ use Zend\Console\Adapter\AdapterInterface;
 use ZF\Console\Route;
 
 /**
- * Class CreateFromSource
+ * Class CreateFromSourceCommand
  *
  * PHP Version 7
  *
@@ -51,82 +51,37 @@ class CreateFromSourceCommand
      */
     public function __invoke(Route $route, AdapterInterface $console)
     {
-        $sourceFile = $route->getMatchedParam('sourceFile');
+        $sourceFilePath = $route->getMatchedParam('sourceFile');
+        $sourceFile = new SourceFile($sourceFilePath);
 
-        $fp = fopen($sourceFile, 'rb');
-        $sourceClassName = $sourceNamespace = $buffer = '';
-        while (!$sourceClassName) {
-            if (feof($fp)) {
-                break;
-            }
+        $classReflection = new ClassReflection($sourceFile->getFullClassName());
+        $classGenerator = ClassGenerator::fromReflection($classReflection);
 
-            $buffer .= fread($fp, 512);
-            if (preg_match('/class\s+(\w+)?/', $buffer, $matches)) {
-                $sourceClassName = $matches[1];
-                break;
-            }
-        }
-        while (!$sourceNamespace) {
-            if (feof($fp)) {
-                break;
-            }
-
-            $buffer .= fread($fp, 512);
-            if (preg_match('/namespace\s+(.*)?\;/', $buffer, $matches)) {
-                $sourceNamespace = $matches[1];
-                break;
-            }
-        }
-
-        try {
-            $classReflection = new ClassReflection($sourceNamespace . "\\" . $sourceClassName);
-
-        } catch (ReflectionException $exception) {
-            return;
-        }
-
-        if ($classReflection->isInterface()) {
-            return;
-        }
-
-        if ($classReflection->isAbstract()) {
-            return;
-        }
-
-        $class = ClassGenerator::fromReflection($classReflection);
-
-        if ($class->getExtendedClass() === \Exception::class) {
-            return;
-        }
-
-        $testClassProperty = new PropertyGenerator(
-            lcfirst($class->getName())
-        );
+        $testClassProperty = new PropertyGenerator(lcfirst($classGenerator->getName()));
         $testClassProperty->setDefaultValue(null, 'auto', PropertyValueGenerator::OUTPUT_SINGLE_LINE);
         $testClassProperty->setFlags(PropertyGenerator::FLAG_PROTECTED);
-        $testClassProperty->setDocBlock(
-            DocBlockGenerator::fromArray(
-                [
-                    'tags' => [
-                        [
-                            'name'        => 'var',
-                            'description' => ucfirst($class->getName()),
-                        ],
-                    ],
-                ]
-            )
-        );
-
-        $className = $class->getName() . 'Test';
-        $classNamespace = $class->getNamespaceName() . 'Test';
-        $classGenerator = new ClassGenerator($className, $classNamespace);
-        $classGenerator->addUse(TestCase::class);
-        $classGenerator->addUse($class->getNamespaceName() . "\\" . $class->getName());
-        $classGenerator->setExtendedClass(TestCase::class);
-        $classGenerator->addPropertyFromGenerator($testClassProperty);
-        $classDocBlock = DocBlockGenerator::fromArray(
+        $testClassPropertyDocBlock = DocBlockGenerator::fromArray(
             [
-                'shortdescription' => 'Class ' . $className,
+                'tags' => [
+                    [
+                        'name'        => 'var',
+                        'description' => ucfirst($classGenerator->getName()),
+                    ],
+                ],
+            ]
+        );
+        $testClassProperty->setDocBlock($testClassPropertyDocBlock);
+
+        $testClassName = $classGenerator->getName() . 'Test';
+        $testClassNamespace = $classGenerator->getNamespaceName() . 'Test';
+        $testClassGenerator = new ClassGenerator($testClassName, $testClassNamespace);
+        $testClassGenerator->addUse(TestCase::class);
+        $testClassGenerator->addUse($classGenerator->getNamespaceName() . "\\" . $classGenerator->getName());
+        $testClassGenerator->setExtendedClass(TestCase::class);
+        $testClassGenerator->addPropertyFromGenerator($testClassProperty);
+        $testClassDocBlock = DocBlockGenerator::fromArray(
+            [
+                'shortdescription' => 'Class ' . $testClassName,
                 'longdescription'  => 'PHP Version 7',
                 'tags'             => [
                     [
@@ -135,7 +90,7 @@ class CreateFromSourceCommand
                     ],
                     [
                         'name'        => 'package',
-                        'description' => $classNamespace,
+                        'description' => $testClassNamespace,
                     ],
                     [
                         'name'        => 'author',
@@ -152,8 +107,9 @@ class CreateFromSourceCommand
                 ],
             ]
         );
+        $testClassGenerator->setDocBlock($testClassDocBlock);
 
-        $classGenerator->setDocBlock($classDocBlock);
+
 
         $setUpMethodBody = [];
 
@@ -166,7 +122,7 @@ class CreateFromSourceCommand
                 $reflectionClass = $reflectionParameter->getClass();
 
                 if ($reflectionClass) {
-                    $classGenerator->addUse($reflectionClass->getName());
+                    $testClassGenerator->addUse($reflectionClass->getName());
 
                     $reflectionParameterProperty = '$this->' . lcfirst($reflectionParameter->getName());
                     $setUpMethodBody[] = $reflectionParameterProperty . ' = $this->createMock(' . $reflectionClass->getShortName(
@@ -191,19 +147,19 @@ class CreateFromSourceCommand
                         )
                     );
 
-                    $classGenerator->addPropertyFromGenerator($testClassProperty);
+                    $testClassGenerator->addPropertyFromGenerator($testClassProperty);
 
                 }
             }
             $setUpMethodBody[] = '';
         }
 
-        if (count($reflectionParameterProperties) > 0) {
-            $setUpMethodBody[] = '$this->' . lcfirst($class->getName()) . ' = new ' . $class->getName() . '(';
+        if (\count($reflectionParameterProperties) > 0) {
+            $setUpMethodBody[] = '$this->' . lcfirst($classGenerator->getName()) . ' = new ' . $classGenerator->getName() . '(';
             $setUpMethodBody[] = '    ' . implode(',', $reflectionParameterProperties);
             $setUpMethodBody[] = ');';
         } else {
-            $setUpMethodBody[] = '$this->' . lcfirst($class->getName()) . ' = new ' . $class->getName() . '();';
+            $setUpMethodBody[] = '$this->' . lcfirst($classGenerator->getName()) . ' = new ' . $classGenerator->getName() . '();';
         }
 
         $docBlock = DocBlockGenerator::fromArray(
@@ -219,15 +175,15 @@ class CreateFromSourceCommand
         $setUpMethodGenerator = new MethodGenerator(
             'setUp', [], 'public', implode("\n", $setUpMethodBody), $docBlock
         );
-        $classGenerator->addMethodFromGenerator($setUpMethodGenerator);
+        $testClassGenerator->addMethodFromGenerator($setUpMethodGenerator);
 
         $testMethodGenerator = new MethodGenerator(
             'test', [], 'public', '', $docBlock
         );
-        $classGenerator->addMethodFromGenerator($testMethodGenerator);
+        $testClassGenerator->addMethodFromGenerator($testMethodGenerator);
 
         $fileGenerator = new FileGenerator();
-        $fileGenerator->setClass($classGenerator);
+        $fileGenerator->setClass($testClassGenerator);
 
         $console->writeLine(@$fileGenerator->generate());
     }
